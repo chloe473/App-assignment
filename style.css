@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+
+:root {
+    --purple: #33206f;
+    --purple-dark: #29185e;
+    --purple-light: #eee9ff;
+    --gold: #d2ae52;
+    --text: #27243a;
+    --muted: #77738a;
+    --page: #fafafa;
+    --white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    color: var(--text);
+    font-family: "DM Sans", Arial, sans-serif;
+}
+
+.app {
+    width: min(1200px, 94vw);
+    margin: 0 auto;
+    padding: 48px 0 36px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 34px;
+}
+
+.eyebrow,
+.language-label {
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 0.8rem;
+}
+
+.eyebrow {
+    color: var(--purple);
+    margin: 0 0 7px;
+}
+
+h1 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    margin: 0;
+}
+
+.generate-button,
+.primary-button {
+    border: 0;
+    background: var(--purple);
+    color: white;
+    font: inherit;
+    font-weight: 700;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.generate-button {
+    padding: 15px 24px;
+}
+
+.generate-button:hover,
+.primary-button:hover {
+    background: var(--purple-dark);
+    transform: translateY(-1px);
+}
+
+.progress-area {
+    max-width: 900px;
+    margin: 0 auto 22px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 9px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.progress-track {
+    height: 7px;
+    border-radius: 99px;
+    background: #e6e2ed;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 5%;
+    height: 100%;
+    background: var(--purple);
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+.flashcard-area {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 900px) 64px;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+}
+
+.flashcard {
+    height: 510px;
+    perspective: 1200px;
+    cursor: pointer;
+    outline: none;
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transition: transform 0.65s ease;
+    transform-style: preserve-3d;
+}
+
+.flashcard.flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 34px;
+    overflow: hidden;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 24px 55px rgba(40, 29, 80, 0.20);
+}
+
+.card-front,
+.card-back {
+    background: var(--purple);
+    color: white;
+}
+
+.card-back {
+    transform: rotateY(180deg);
+    background: var(--purple-dark);
+}
+
+.language-label {
+    color: #aaa1d0;
+    margin-bottom: 24px;
+}
+
+.card-face h2 {
+    max-width: 80%;
+    margin: 0;
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: clamp(2.7rem, 6vw, 5rem);
+    line-height: 1.05;
+}
+
+.nav-button {
+    width: 58px;
+    height: 58px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--purple-light);
+    color: var(--purple);
+    font-size: 2rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.nav-button:hover {
+    transform: scale(1.05);
+    background: #e1d9ff;
+}
+
+.controls {
+    max-width: 900px;
+    margin: 28px auto 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.secondary-button,
+.primary-button {
+    min-height: 64px;
+    border-radius: 16px;
+    font: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.secondary-button {
+    border: 0;
+    background: var(--purple-light);
+    color: var(--purple);
+}
+
+.secondary-button:hover {
+    background: #e1d9ff;
+}
+
+.hint {
+    text-align: center;
+    color: var(--muted);
+    margin: 12px 0 0;
+    font-size: 0.9rem;
+}
+
+/* Decorative shapes, similar to the supplied design. */
+.decor {
+    position: absolute;
+    opacity: 0.9;
+}
+
+.dot-one {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--gold);
+    top: 44px;
+    left: 44px;
+}
+
+.dot-two {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #b85682;
+    top: 96px;
+    right: 60px;
+}
+
+.square-one {
+    width: 31px;
+    height: 31px;
+    background: #6db6c2;
+    bottom: 50px;
+    left: 52px;
+    transform: rotate(35deg);
+}
+
+.square-two {
+    width: 25px;
+    height: 25px;
+    background: #a98473;
+    top: 52px;
+    right: 112px;
+    transform: rotate(20deg);
+}
+
+@media (max-width: 800px) {
+    .app {
+        padding-top: 28px;
+    }
+
+    .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .generate-button {
+        width: 100%;
+    }
+
+    .flashcard-area {
+        grid-template-columns: 1fr;
+    }
+
+    .flashcard {
+        height: 430px;
+    }
+
+    .nav-button {
+        display: none;
+    }
+
+    .controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dot-one {
+        top: 28px;
+        left: 28px;
+    }
+
+    .square-one {
+        bottom: 30px;
+        left: 34px;
+    }
+}

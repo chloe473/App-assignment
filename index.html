@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noongar Vocabulary</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="app">
+
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">NOONGAR VOCABULARY</p>
+                <h1>Learn Noongar</h1>
+            </div>
+
+            <button id="generateButton" class="generate-button">
+                Generate Set
+            </button>
+        </header>
+
+        <section class="progress-area">
+            <div class="progress-text">
+                <span id="cardNumber">Card 1 of 20</span>
+                <span id="statusText">Generate a set to begin</span>
+            </div>
+
+            <div class="progress-track">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+        </section>
+
+        <section class="flashcard-area">
+
+            <button id="previousButton" class="nav-button" aria-label="Previous card">
+                ←
+            </button>
+
+            <div
+                id="flashcard"
+                class="flashcard"
+                tabindex="0"
+                role="button"
+                aria-label="Flashcard. Click or press Enter to flip."
+            >
+                <div class="card-inner">
+
+                    <div class="card-face card-front">
+                        <span class="language-label">ENGLISH</span>
+                        <h2 id="englishWord">Hello / Yes</h2>
+                        <span class="decor dot-one"></span>
+                        <span class="decor dot-two"></span>
+                        <span class="decor square-one"></span>
+                        <span class="decor square-two"></span>
+                    </div>
+
+                    <div class="card-face card-back">
+                        <span class="language-label">NOONGAR</span>
+                        <h2 id="noongarWord">—</h2>
+                        <span class="decor dot-one"></span>
+                        <span class="decor dot-two"></span>
+                        <span class="decor square-one"></span>
+                        <span class="decor square-two"></span>
+                    </div>
+
+                </div>
+            </div>
+
+            <button id="nextButton" class="nav-button" aria-label="Next card">
+                →
+            </button>
+
+        </section>
+
+        <div class="controls">
+            <button id="flipButton" class="secondary-button">
+                ↩ Flip
+            </button>
+
+            <button id="nextButtonBottom" class="primary-button">
+                Next →
+            </button>
+        </div>
+
+        <div class="starting-side" aria-label="Choose which translation appears first">
+            <span class="starting-side-label">Start with</span>
+            <div class="side-options" role="group" aria-label="Starting translation">
+                <button id="englishFirstButton" class="side-option active" aria-pressed="true">
+                    English
+                </button>
+                <button id="noongarFirstButton" class="side-option" aria-pressed="false">
+                    Noongar
+                </button>
+            </div>
+        </div>
+
+        <p class="hint">Click the card or press Flip to reveal the other side.</p>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

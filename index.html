@@ -8,8 +8,10 @@
 </head>
 
 <body>
+    <!-- Main app container that wraps the whole flashcard page. -->
     <main class="app">
 
+        <!-- Top section with the title and the button to generate a flashcard set. -->
         <header class="topbar">
             <div>
                 <p class="eyebrow">NOONGAR VOCABULARY</p>
@@ -21,6 +23,7 @@
             </button>
         </header>
 
+        <!-- Progress area shows the current card number and the loading status. -->
         <section class="progress-area">
             <div class="progress-text">
                 <span id="cardNumber">Card 1 of 20</span>
@@ -32,6 +35,7 @@
             </div>
         </section>
 
+        <!-- Main flashcard display with navigation buttons for moving between cards. -->
         <section class="flashcard-area">
 
             <button id="previousButton" class="nav-button" aria-label="Previous card">
@@ -47,6 +51,7 @@
             >
                 <div class="card-inner">
 
+                    <!-- Front side of the card normally shows the English word. -->
                     <div class="card-face card-front">
                         <span class="language-label">ENGLISH</span>
                         <h2 id="englishWord">Hello / Yes</h2>
@@ -56,6 +61,7 @@
                         <span class="decor square-two"></span>
                     </div>
 
+                    <!-- Back side of the card shows the Noongar translation. -->
                     <div class="card-face card-back">
                         <span class="language-label">NOONGAR</span>
                         <h2 id="noongarWord">—</h2>
@@ -74,6 +80,7 @@
 
         </section>
 
+        <!-- Buttons for flipping the card and moving to the next card. -->
         <div class="controls">
             <button id="flipButton" class="secondary-button">
                 ↩ Flip
@@ -84,6 +91,7 @@
             </button>
         </div>
 
+        <!-- Lets the user choose which language appears first on the card. -->
         <div class="starting-side" aria-label="Choose which translation appears first">
             <span class="starting-side-label">Start with</span>
             <div class="side-options" role="group" aria-label="Starting translation">
@@ -96,6 +104,7 @@
             </div>
         </div>
 
+        <!-- Small reminder text under the controls. -->
         <p class="hint">Click the card or press Flip to reveal the other side.</p>
 
     </main>

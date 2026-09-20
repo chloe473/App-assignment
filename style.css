@@ -1,5 +1,7 @@
+/* Import the fonts used for the app styling. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
+/* Define the colour palette and shared design values used throughout the app. */
 :root {
     --purple: #33206f;
     --purple-dark: #29185e;
@@ -11,10 +13,12 @@
     --white: #ffffff;
 }
 
+/* Make all elements use the same box-sizing so spacing stays predictable. */
 * {
     box-sizing: border-box;
 }
 
+/* Set the base page styling and overall background for the app. */
 body {
     margin: 0;
     min-height: 100vh;
@@ -23,12 +27,14 @@ body {
     font-family: "DM Sans", Arial, sans-serif;
 }
 
+/* Keep the content centered and within a readable width. */
 .app {
     width: min(1200px, 94vw);
     margin: 0 auto;
     padding: 48px 0 36px;
 }
 
+/* Layout for the top title row and the generate button. */
 .topbar {
     display: flex;
     justify-content: space-between;
@@ -55,6 +61,7 @@ h1 {
     margin: 0;
 }
 
+/* Button styling for the main actions in the app. */
 .generate-button,
 .primary-button {
     border: 0;
@@ -77,6 +84,7 @@ h1 {
     transform: translateY(-1px);
 }
 
+/* The progress bar and text show the user's place within the current set. */
 .progress-area {
     max-width: 900px;
     margin: 0 auto 22px;
@@ -106,6 +114,7 @@ h1 {
     transition: width 0.25s ease;
 }
 
+/* Create the main card area with navigation buttons on both sides. */
 .flashcard-area {
     display: grid;
     grid-template-columns: 64px minmax(0, 900px) 64px;
@@ -171,6 +180,7 @@ h1 {
     line-height: 1.05;
 }
 
+/* Styling for the left and right arrow buttons beside the card. */
 .nav-button {
     width: 58px;
     height: 58px;
@@ -188,6 +198,7 @@ h1 {
     background: #e1d9ff;
 }
 
+/* The control row has the flip and next buttons spaced evenly. */
 .controls {
     max-width: 900px;
     margin: 28px auto 0;
@@ -216,6 +227,7 @@ h1 {
     background: #e1d9ff;
 }
 
+/* This section lets the user choose whether English or Noongar appears first. */
 .starting-side {
     max-width: 900px;
     margin: 22px auto 0;

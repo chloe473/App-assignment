@@ -18,13 +18,17 @@
                 <h1>Learn Noongar</h1>
             </div>
 
-            <button id="generateButton" class="generate-button">
-                Generate Set
-            </button>
+            <div class="topbar-actions">
+                <a id="quizLink" class="quiz-link" href="#quiz">Take Quiz</a>
+                <button id="generateButton" class="generate-button">
+                    Generate Set
+                </button>
+            </div>
         </header>
 
-        <!-- Progress area shows the current card number and the loading status. -->
-        <section class="progress-area">
+        <section id="flashcardView">
+            <!-- Progress area shows the current card number and the loading status. -->
+            <section class="progress-area">
             <div class="progress-text">
                 <span id="cardNumber">Card 1 of 20</span>
                 <span id="statusText">Generate a set to begin</span>
@@ -33,7 +37,7 @@
             <div class="progress-track">
                 <div id="progressBar" class="progress-bar"></div>
             </div>
-        </section>
+            </section>
 
         <!-- Main flashcard display with navigation buttons for moving between cards. -->
         <section class="flashcard-area">
@@ -106,8 +110,47 @@
             </div>
         </div>
 
-        <!-- Small reminder text under the controls. -->
-        <p class="hint">Click the card or press Flip to reveal the other side.</p>
+            <!-- Small reminder text under the controls. -->
+            <p class="hint">Click the card or press Flip to reveal the other side.</p>
+        </section>
+
+        <section id="quizView" hidden>
+            <header class="topbar quiz-topbar">
+                <div>
+                    <p class="eyebrow">NOONGAR VOCABULARY</p>
+                    <h1>Translation Quiz</h1>
+                </div>
+                <a id="flashcardLink" class="quiz-link" href="#flashcards">Back to Flashcards</a>
+            </header>
+
+            <section class="progress-area">
+                <div class="progress-text">
+                    <span id="questionNumber">Question 1 of 10</span>
+                    <span id="quizStatus">Choose the English translation</span>
+                </div>
+                <div class="progress-track">
+                    <div id="quizProgress" class="progress-bar"></div>
+                </div>
+            </section>
+
+            <section id="quizPanel" class="quiz-panel" aria-live="polite">
+                <p class="language-label">WHAT DOES THIS NOONGAR WORD MEAN?</p>
+                <h2 id="quizWord">Loading...</h2>
+                <div id="options" class="options" role="group" aria-label="English translation options"></div>
+                <button id="nextQuestion" class="primary-button next-question" disabled>Next</button>
+            </section>
+
+            <section id="resultsPanel" class="results-panel" hidden>
+                <p class="eyebrow">QUIZ COMPLETE</p>
+                <h2 id="score">0 / 10</h2>
+                <p id="scoreMessage">Your result will appear here.</p>
+                <button id="newQuiz" class="primary-button">Generate Another Quiz</button>
+            </section>
+
+            <p id="errorMessage" class="quiz-error" role="alert" hidden>
+                Could not load the quiz. Is the Python backend running?
+            </p>
+        </section>
 
     </main>
 

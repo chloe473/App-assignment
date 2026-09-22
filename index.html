@@ -11,8 +11,10 @@
     <!-- Main app container that wraps the whole flashcard page. -->
     <main class="app">
 
-        <!-- Home page with the two learning activities. -->
+        <!-- Home page with the learning activities and the user's progress shortcut. -->
         <header id="homeView" class="home-view">
+            <!-- The statistics link stays in the upper-right corner so progress is always easy to reach. -->
+            <a id="statisticsLink" class="statistics-link" href="#statistics">My Statistics</a>
             <div>
                 <p class="eyebrow">NOONGAR VOCABULARY</p>
                 <h1>Learn Noongar</h1>
@@ -34,6 +36,66 @@
                 </a>
             </div>
         </header>
+
+        <!-- Statistics view summarises quiz progress and filters the vocabulary by proficiency. -->
+        <section id="statisticsView" class="statistics-view" hidden>
+            <!-- The statistics header provides a clear return path to the activity menu. -->
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">NOONGAR VOCABULARY</p>
+                    <h1>My Statistics</h1>
+                </div>
+                <a id="homeFromStatistics" class="quiz-link" href="#home">Home</a>
+            </header>
+
+            <!-- These summary cards show the requested progress measures at a glance. -->
+            <section class="statistics-summary" aria-label="Vocabulary progress summary">
+                <article class="stat-card stat-card-complete">
+                    <span class="stat-label">WORDS COMPLETE</span>
+                    <strong id="wordsComplete">0%</strong>
+                    <span id="studiedWordsLabel">of studied words</span>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">STUDYING</span>
+                    <strong id="studyingCount">0</strong>
+                    <span>words</span>
+                </article>
+                <article class="stat-card">
+                    <span class="stat-label">MASTERED</span>
+                    <strong id="masteredCount">0</strong>
+                    <span>words</span>
+                </article>
+            </section>
+
+            <!-- The pie chart shows how the complete vocabulary is distributed across all study states. -->
+            <section class="statistics-chart-panel" aria-labelledby="progressChartTitle">
+                <div class="statistics-chart-copy">
+                    <p class="language-label">FULL WORD LIST</p>
+                    <h2 id="progressChartTitle">Your study progress</h2>
+                    <p>Every word is included, including words you have not tested yet.</p>
+                </div>
+                <div class="statistics-chart-area">
+                    <div id="progressChart" class="progress-chart" role="img" aria-label="Vocabulary progress chart"></div>
+                    <div id="progressLegend" class="progress-legend" aria-label="Vocabulary progress breakdown"></div>
+                </div>
+            </section>
+
+            <!-- Filter buttons let users switch between the complete list and progress categories. -->
+            <section class="statistics-list-section" aria-labelledby="wordProgressTitle">
+                <div class="statistics-list-heading">
+                    <div>
+                        <p class="language-label">WORD PROGRESS</p>
+                        <h2 id="wordProgressTitle">Your vocabulary</h2>
+                    </div>
+                    <div class="statistics-filters" role="group" aria-label="Filter word progress">
+                        <button class="statistics-filter active" data-filter="all" aria-pressed="true">All words</button>
+                        <button class="statistics-filter" data-filter="studying" aria-pressed="false">Studying</button>
+                        <button class="statistics-filter" data-filter="mastered" aria-pressed="false">Mastered</button>
+                    </div>
+                </div>
+                <div id="statisticsList" class="statistics-list" aria-live="polite"></div>
+            </section>
+        </section>
 
         <!-- Explore view gives users a fast way to search and inspect dictionary entries. -->
         <section id="exploreView" class="explore-view" hidden>

@@ -24,6 +24,28 @@ const nextButton = document.getElementById("nextButton");
 const englishFirstButton = document.getElementById("englishFirstButton");
 const noongarFirstButton = document.getElementById("noongarFirstButton");
 
+const flashcardView = document.getElementById("flashcardView");
+const quizView = document.getElementById("quizView");
+const quizLink = document.getElementById("quizLink");
+const flashcardLink = document.getElementById("flashcardLink");
+const questionNumber = document.getElementById("questionNumber");
+const quizStatus = document.getElementById("quizStatus");
+const quizProgress = document.getElementById("quizProgress");
+const quizWord = document.getElementById("quizWord");
+const options = document.getElementById("options");
+const nextQuestion = document.getElementById("nextQuestion");
+const quizPanel = document.getElementById("quizPanel");
+const resultsPanel = document.getElementById("resultsPanel");
+const scoreDisplay = document.getElementById("score");
+const scoreMessage = document.getElementById("scoreMessage");
+const newQuiz = document.getElementById("newQuiz");
+const errorMessage = document.getElementById("errorMessage");
+
+let questions = [];
+let quizIndex = 0;
+let score = 0;
+let selectedAnswer = null;
+
 // Update the visible card and progress bar for the current item.
 function updateCard() {
     if (cards.length === 0) return;
@@ -113,6 +135,104 @@ async function generateSet() {
     }
 }
 
+function showFlashcards() {
+    quizView.hidden = true;
+    flashcardView.hidden = false;
+    history.replaceState(null, "", "index.html");
+}
+
+function renderQuestion() {
+    const question = questions[quizIndex];
+    selectedAnswer = null;
+    questionNumber.textContent = `Question ${quizIndex + 1} of ${questions.length}`;
+    quizStatus.textContent = "Choose the English translation";
+    quizProgress.style.width = `${((quizIndex + 1) / questions.length) * 100}%`;
+    quizWord.textContent = question.noongar;
+    nextQuestion.disabled = true;
+    nextQuestion.textContent = quizIndex === questions.length - 1 ? "See Score" : "Next";
+    options.replaceChildren();
+
+    question.options.forEach((option) => {
+        const optionButton = document.createElement("button");
+        optionButton.type = "button";
+        optionButton.className = "option-button";
+        optionButton.textContent = option;
+        optionButton.addEventListener("click", () => selectAnswer(option, optionButton));
+        options.appendChild(optionButton);
+    });
+}
+
+function selectAnswer(answer, selectedButton) {
+    selectedAnswer = answer;
+    nextQuestion.disabled = false;
+    quizStatus.textContent = "Answer selected";
+
+    document.querySelectorAll(".option-button").forEach((button) => {
+        button.classList.remove("selected");
+    });
+    selectedButton.classList.add("selected");
+}
+
+function showResults() {
+    quizPanel.hidden = true;
+    resultsPanel.hidden = false;
+    questionNumber.textContent = "Quiz complete";
+    quizStatus.textContent = `${score} correct`;
+    quizProgress.style.width = "100%";
+    scoreDisplay.textContent = `${score} / ${questions.length}`;
+    scoreMessage.textContent = score === questions.length
+        ? "Perfect score. Kaartdijin!"
+        : "Keep practising and try another quiz.";
+}
+
+function goToNextQuestion() {
+    if (selectedAnswer === null) return;
+
+    if (selectedAnswer === questions[quizIndex].answer) {
+        score += 1;
+    }
+
+    if (quizIndex === questions.length - 1) {
+        showResults();
+        return;
+    }
+
+    quizIndex += 1;
+    renderQuestion();
+}
+
+async function generateQuiz() {
+    errorMessage.hidden = true;
+    resultsPanel.hidden = true;
+    quizPanel.hidden = false;
+    quizWord.textContent = "Loading...";
+    options.replaceChildren();
+    nextQuestion.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/api/quiz`);
+        if (!response.ok) throw new Error("Could not generate quiz");
+
+        const data = await response.json();
+        questions = data.questions;
+        quizIndex = 0;
+        score = 0;
+        renderQuestion();
+    } catch (error) {
+        console.error(error);
+        quizPanel.hidden = true;
+        errorMessage.hidden = false;
+    }
+}
+
+function showQuiz(event) {
+    event.preventDefault();
+    flashcardView.hidden = true;
+    quizView.hidden = false;
+    history.replaceState(null, "", "index.html#quiz");
+    generateQuiz();
+}
+
 // Connect all user actions to the matching functions.
 flashcard.addEventListener("click", flipCard);
 flipButton.addEventListener("click", flipCard);
@@ -122,6 +242,13 @@ previousButton.addEventListener("click", previousCard);
 generateButton.addEventListener("click", generateSet);
 englishFirstButton.addEventListener("click", () => setStartingSide("english"));
 noongarFirstButton.addEventListener("click", () => setStartingSide("noongar"));
+quizLink.addEventListener("click", showQuiz);
+flashcardLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    showFlashcards();
+});
+nextQuestion.addEventListener("click", goToNextQuestion);
+newQuiz.addEventListener("click", generateQuiz);
 
 // Allow keyboard use so the flashcard can be flipped with key presses.
 flashcard.addEventListener("keydown", (event) => {
@@ -140,5 +267,11 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-// Load a first deck automatically when the page opens.
-generateSet();
+// Load the selected view automatically when the page opens.
+if (window.location.hash === "#quiz") {
+    flashcardView.hidden = true;
+    quizView.hidden = false;
+    generateQuiz();
+} else {
+    generateSet();
+}

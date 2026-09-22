@@ -11,22 +11,41 @@
     <!-- Main app container that wraps the whole flashcard page. -->
     <main class="app">
 
-        <!-- Top section with the title and the button to generate a flashcard set. -->
-        <header class="topbar">
+        <!-- Home page with the two learning activities. -->
+        <header id="homeView" class="home-view">
             <div>
                 <p class="eyebrow">NOONGAR VOCABULARY</p>
                 <h1>Learn Noongar</h1>
+                <p class="home-intro">Choose how you would like to practise today.</p>
             </div>
 
-            <div class="topbar-actions">
-                <a id="quizLink" class="quiz-link" href="#quiz">Take Quiz</a>
-                <button id="generateButton" class="generate-button">
-                    Generate Set
-                </button>
+            <div class="home-actions">
+                <a id="flashcardsLink" class="activity-button" href="#flashcards">
+                    <strong>Flashcards</strong>
+                    <span>Explore words, pronunciation, and word types.</span>
+                </a>
+                <a id="quizLink" class="activity-button" href="#quiz">
+                    <strong>Translation Quiz</strong>
+                    <span>Test your Noongar translation knowledge.</span>
+                </a>
             </div>
         </header>
 
-        <section id="flashcardView">
+        <section id="flashcardView" hidden>
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">NOONGAR VOCABULARY</p>
+                    <h1>Flashcards</h1>
+                </div>
+
+                <div class="topbar-actions">
+                    <a id="homeFromFlashcards" class="quiz-link" href="#home">Home</a>
+                <button id="generateButton" class="generate-button">
+                    Generate Set
+                </button>
+                </div>
+            </header>
+
             <!-- Progress area shows the current card number and the loading status. -->
             <section class="progress-area">
             <div class="progress-text">
@@ -120,7 +139,7 @@
                     <p class="eyebrow">NOONGAR VOCABULARY</p>
                     <h1>Translation Quiz</h1>
                 </div>
-                <a id="flashcardLink" class="quiz-link" href="#flashcards">Back to Flashcards</a>
+                <a id="homeFromQuiz" class="quiz-link" href="#home">Home</a>
             </header>
 
             <section class="progress-area">

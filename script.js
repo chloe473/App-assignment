@@ -24,10 +24,13 @@ const nextButton = document.getElementById("nextButton");
 const englishFirstButton = document.getElementById("englishFirstButton");
 const noongarFirstButton = document.getElementById("noongarFirstButton");
 
+const homeView = document.getElementById("homeView");
 const flashcardView = document.getElementById("flashcardView");
 const quizView = document.getElementById("quizView");
+const flashcardsLink = document.getElementById("flashcardsLink");
 const quizLink = document.getElementById("quizLink");
-const flashcardLink = document.getElementById("flashcardLink");
+const homeFromFlashcards = document.getElementById("homeFromFlashcards");
+const homeFromQuiz = document.getElementById("homeFromQuiz");
 const questionNumber = document.getElementById("questionNumber");
 const quizStatus = document.getElementById("quizStatus");
 const quizProgress = document.getElementById("quizProgress");
@@ -135,10 +138,21 @@ async function generateSet() {
     }
 }
 
-function showFlashcards() {
+function showHome(event) {
+    event.preventDefault();
+    homeView.hidden = false;
+    flashcardView.hidden = true;
+    quizView.hidden = true;
+    history.replaceState(null, "", "index.html#home");
+}
+
+function showFlashcards(event) {
+    event.preventDefault();
+    homeView.hidden = true;
     quizView.hidden = true;
     flashcardView.hidden = false;
-    history.replaceState(null, "", "index.html");
+    history.replaceState(null, "", "index.html#flashcards");
+    generateSet();
 }
 
 function renderQuestion() {
@@ -227,6 +241,7 @@ async function generateQuiz() {
 
 function showQuiz(event) {
     event.preventDefault();
+    homeView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = false;
     history.replaceState(null, "", "index.html#quiz");
@@ -242,11 +257,10 @@ previousButton.addEventListener("click", previousCard);
 generateButton.addEventListener("click", generateSet);
 englishFirstButton.addEventListener("click", () => setStartingSide("english"));
 noongarFirstButton.addEventListener("click", () => setStartingSide("noongar"));
+flashcardsLink.addEventListener("click", showFlashcards);
 quizLink.addEventListener("click", showQuiz);
-flashcardLink.addEventListener("click", (event) => {
-    event.preventDefault();
-    showFlashcards();
-});
+homeFromFlashcards.addEventListener("click", showHome);
+homeFromQuiz.addEventListener("click", showHome);
 nextQuestion.addEventListener("click", goToNextQuestion);
 newQuiz.addEventListener("click", generateQuiz);
 
@@ -269,9 +283,13 @@ document.addEventListener("keydown", (event) => {
 
 // Load the selected view automatically when the page opens.
 if (window.location.hash === "#quiz") {
+    homeView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = false;
     generateQuiz();
+} else if (window.location.hash === "#flashcards") {
+    showFlashcards({ preventDefault: () => {} });
 } else {
-    generateSet();
-}
+    homeView.hidden = false;
+    flashcardView.hidden = true;
+    quizView.hidden = true;

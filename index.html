@@ -20,6 +20,10 @@
             </div>
 
             <div class="home-actions">
+                <a id="exploreLink" class="activity-button activity-button-explore" href="#explore">
+                    <strong>Explore Words</strong>
+                    <span>Search the Noongar dictionary and hear each word.</span>
+                </a>
                 <a id="flashcardsLink" class="activity-button" href="#flashcards">
                     <strong>Flashcards</strong>
                     <span>Explore words, pronunciation, and word types.</span>
@@ -30,6 +34,44 @@
                 </a>
             </div>
         </header>
+
+        <!-- Explore view gives users a fast way to search and inspect dictionary entries. -->
+        <section id="exploreView" class="explore-view" hidden>
+            <!-- The top bar keeps navigation visible while the user browses results. -->
+            <header class="topbar explore-topbar">
+                <div>
+                    <p class="eyebrow">NOONGAR VOCABULARY</p>
+                    <h1>Explore words</h1>
+                </div>
+                <a id="homeFromExplore" class="quiz-link" href="#home">Home</a>
+            </header>
+
+            <!-- This search panel explains the search scope and owns the auto-focused input. -->
+            <section class="explore-search-panel" aria-labelledby="exploreSearchTitle">
+                <div class="explore-heading">
+                    <p class="language-label">DICTIONARY SEARCH</p>
+                    <h2 id="exploreSearchTitle">What word are you looking for?</h2>
+                    <p>Search in Noongar, English, pronunciation, or word type.</p>
+                </div>
+                <div class="search-field">
+                    <label for="searchInput">Search the dictionary</label>
+                    <div class="search-input-wrap">
+                        <span class="search-icon" aria-hidden="true">⌕</span>
+                        <input id="searchInput" type="search" autocomplete="off" placeholder="Try “water” or “baat”" aria-controls="searchResults">
+                        <button id="clearSearchButton" class="clear-search" type="button" aria-label="Clear search" title="Clear search" hidden>✕</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results are populated by JavaScript and announced for screen-reader users. -->
+            <section id="searchResults" class="search-results" aria-live="polite" aria-busy="false">
+                <div class="search-message">
+                    <span class="message-mark" aria-hidden="true">✦</span>
+                    <h2>Start with a word</h2>
+                    <p>Search the dictionary to discover a Noongar word, its meaning, and how to say it.</p>
+                </div>
+            </section>
+        </section>
 
         <section id="flashcardView" hidden>
             <header class="topbar">

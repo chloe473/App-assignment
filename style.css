@@ -180,6 +180,13 @@ h1 {
     line-height: 1.05;
 }
 
+.noongar-detail {
+    margin: 14px 0 0;
+    color: #d9d2ef;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
 /* Styling for the left and right arrow buttons beside the card. */
 .nav-button {
     width: 58px;

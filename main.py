@@ -26,17 +26,23 @@ def load_wordlist():
     """Data tier: read vocabulary from the CSV wordlist."""
     words = []
 
+    # Open the CSV using UTF-8 so accented characters and special characters load correctly.
     with DATA_FILE.open("r", encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
 
+        # Go through each row and keep only entries with both a Noongar and English value.
         for row in reader:
             noongar = (row.get("Noongar Word") or "").strip()
             english = (row.get("English Translation") or "").strip()
+            pronunciation = (row.get("Pronunciation (approx.)") or "").strip()
+            word_type = (row.get("Word Type") or "").strip()
 
             if noongar and english:
                 words.append({
                     "noongar": noongar,
                     "english": english,
+                    "pronunciation": pronunciation,
+                    "wordType": word_type,
                 })
 
     return words

@@ -10,6 +10,8 @@ let startingSide = "english";
 const flashcard = document.getElementById("flashcard");
 const englishWord = document.getElementById("englishWord");
 const noongarWord = document.getElementById("noongarWord");
+const noongarPronunciation = document.getElementById("noongarPronunciation");
+const noongarWordType = document.getElementById("noongarWordType");
 const cardNumber = document.getElementById("cardNumber");
 const statusText = document.getElementById("statusText");
 const progressBar = document.getElementById("progressBar");
@@ -30,6 +32,12 @@ function updateCard() {
 
     englishWord.textContent = card.english;
     noongarWord.textContent = card.noongar;
+    noongarPronunciation.textContent = card.pronunciation
+        ? `Pronunciation: ${card.pronunciation}`
+        : "";
+    noongarWordType.textContent = card.wordType
+        ? `Word type: ${card.wordType}`
+        : "";
 
     cardNumber.textContent = `Card ${currentIndex + 1} of ${cards.length}`;
     statusText.textContent = "Click the card to flip";

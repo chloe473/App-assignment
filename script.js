@@ -25,12 +25,15 @@ const englishFirstButton = document.getElementById("englishFirstButton");
 const noongarFirstButton = document.getElementById("noongarFirstButton");
 
 const homeView = document.getElementById("homeView");
+const statisticsView = document.getElementById("statisticsView");
 const exploreView = document.getElementById("exploreView");
 const flashcardView = document.getElementById("flashcardView");
 const quizView = document.getElementById("quizView");
+const statisticsLink = document.getElementById("statisticsLink");
 const exploreLink = document.getElementById("exploreLink");
 const flashcardsLink = document.getElementById("flashcardsLink");
 const quizLink = document.getElementById("quizLink");
+const homeFromStatistics = document.getElementById("homeFromStatistics");
 const homeFromExplore = document.getElementById("homeFromExplore");
 const homeFromFlashcards = document.getElementById("homeFromFlashcards");
 const homeFromQuiz = document.getElementById("homeFromQuiz");
@@ -46,6 +49,14 @@ const scoreDisplay = document.getElementById("score");
 const scoreMessage = document.getElementById("scoreMessage");
 const newQuiz = document.getElementById("newQuiz");
 const errorMessage = document.getElementById("errorMessage");
+const wordsComplete = document.getElementById("wordsComplete");
+const studiedWordsLabel = document.getElementById("studiedWordsLabel");
+const studyingCount = document.getElementById("studyingCount");
+const masteredCount = document.getElementById("masteredCount");
+const progressChart = document.getElementById("progressChart");
+const progressLegend = document.getElementById("progressLegend");
+const statisticsList = document.getElementById("statisticsList");
+const statisticsFilters = document.querySelectorAll(".statistics-filter");
 const searchInput = document.getElementById("searchInput");
 const clearSearchButton = document.getElementById("clearSearchButton");
 const searchResults = document.getElementById("searchResults");
@@ -57,6 +68,11 @@ let questions = [];
 let quizIndex = 0;
 let score = 0;
 let selectedAnswer = null;
+let vocabulary = [];
+let activeStatisticsFilter = "all";
+
+// Keep quiz progress on this browser so statistics remain available after a page refresh.
+const PROFICIENCY_STORAGE_KEY = "noongarVocabularyProficiency";
 
 // Update the visible card and progress bar for the current item.
 function updateCard() {
@@ -150,16 +166,169 @@ async function generateSet() {
 function showHome(event) {
     event.preventDefault();
     homeView.hidden = false;
+    statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = true;
     history.replaceState(null, "", "index.html#home");
 }
 
+// Read the saved proficiency map and tolerate an empty or damaged browser-storage value.
+function readProficiency() {
+    try {
+        return JSON.parse(localStorage.getItem(PROFICIENCY_STORAGE_KEY) || "{}");
+    } catch (error) {
+        return {};
+    }
+}
+
+// Save the latest proficiency map so every quiz attempt contributes to future statistics.
+function saveProficiency(proficiency) {
+    localStorage.setItem(PROFICIENCY_STORAGE_KEY, JSON.stringify(proficiency));
+}
+
+// Convert a numeric proficiency into the category shown on the statistics page.
+function getProficiencyStatus(value) {
+    if (value >= 5) return "mastered";
+    if (value >= 1) return "studying";
+    return "not studied yet";
+}
+
+// Apply one quiz result, clamping every word between zero and five progress points.
+function recordQuizResult(question, isCorrect) {
+    const proficiency = readProficiency();
+    const currentValue = Number(proficiency[question.noongar] || 0);
+    const nextValue = isCorrect
+        ? Math.min(5, currentValue + 1)
+        : Math.max(0, currentValue - 1);
+    proficiency[question.noongar] = nextValue;
+    saveProficiency(proficiency);
+}
+
+// Build the list for the selected filter and show a progress bar for each vocabulary word.
+function renderStatisticsList() {
+    const proficiency = readProficiency();
+    const filteredWords = vocabulary.filter((word) => {
+        const status = getProficiencyStatus(Number(proficiency[word.noongar] || 0));
+        return activeStatisticsFilter === "all" || status === activeStatisticsFilter;
+    });
+
+    statisticsList.replaceChildren();
+    if (filteredWords.length === 0) {
+        statisticsList.innerHTML = `<div class="statistics-empty"><h3>No words here yet</h3><p>Answer quiz questions to build your word progress.</p></div>`;
+        return;
+    }
+
+    filteredWords.forEach((word) => {
+        const value = Number(proficiency[word.noongar] || 0);
+        const status = getProficiencyStatus(value);
+        const row = document.createElement("article");
+        row.className = "statistics-word-row";
+        row.innerHTML = `
+            <div class="statistics-word-details">
+                <h3>${escapeHtml(word.noongar)}</h3>
+                <p>${escapeHtml(word.english)}</p>
+            </div>
+            <div class="statistics-word-progress">
+                <span class="word-status status-${status.replaceAll(" ", "-")}">${status}</span>
+                <div class="proficiency-dots" aria-label="${value} out of 5 proficiency">
+                    ${Array.from({ length: 5 }, (_, index) => `<span class="proficiency-dot${index < value ? " filled" : ""}"></span>`).join("")}
+                </div>
+                <span class="proficiency-number">${value} / 5</span>
+            </div>
+        `;
+        statisticsList.appendChild(row);
+    });
+}
+
+// Update the summary cards using only words that have been tested at least once.
+function renderStatisticsSummary() {
+    const proficiency = readProficiency();
+    const values = vocabulary.map((word) => Number(proficiency[word.noongar] || 0));
+    const mastered = values.filter((value) => value >= 5).length;
+    const studying = values.filter((value) => value >= 1 && value < 5).length;
+    const studied = mastered + studying;
+    const complete = studied === 0 ? 0 : Math.round((mastered / studied) * 100);
+
+    wordsComplete.textContent = `${complete}%`;
+    studiedWordsLabel.textContent = `of studied words (${studied} total)`;
+    studyingCount.textContent = String(studying);
+    masteredCount.textContent = String(mastered);
+    renderProgressChart({ studying, mastered, notStudied: vocabulary.length - studied });
+}
+
+// Render the full-list distribution as a CSS pie chart and a text-based accessible legend.
+function renderProgressChart(counts) {
+    const total = vocabulary.length;
+    const segments = [
+        { key: "studying", label: "Studying", count: counts.studying, color: "#d2ae52" },
+        { key: "mastered", label: "Mastered", count: counts.mastered, color: "#39745b" },
+        { key: "notStudied", label: "Not studied yet", count: counts.notStudied, color: "#d9d3ca" },
+    ];
+    let currentPercentage = 0;
+    const gradient = segments.map((segment) => {
+        const percentage = total === 0 ? 0 : (segment.count / total) * 100;
+        const start = currentPercentage;
+        currentPercentage += percentage;
+        return `${segment.color} ${start}% ${currentPercentage}%`;
+    }).join(", ");
+
+    progressChart.style.background = total === 0
+        ? "#d9d3ca"
+        : `conic-gradient(${gradient})`;
+    progressChart.setAttribute(
+        "aria-label",
+        `${counts.studying} studying, ${counts.mastered} mastered, and ${counts.notStudied} not studied yet out of ${total} words`,
+    );
+    progressLegend.replaceChildren();
+
+    segments.forEach((segment) => {
+        const percentage = total === 0 ? 0 : Math.round((segment.count / total) * 100);
+        const item = document.createElement("div");
+        item.className = "progress-legend-item";
+        item.innerHTML = `
+            <span class="legend-swatch" style="background: ${segment.color}"></span>
+            <span class="legend-label">${segment.label}</span>
+            <strong>${percentage}%</strong>
+            <span class="legend-count">${segment.count} ${segment.count === 1 ? "word" : "words"}</span>
+        `;
+        progressLegend.appendChild(item);
+    });
+}
+
+// Load the shared CSV-backed vocabulary before rendering the statistics view.
+async function loadStatistics() {
+    statisticsList.innerHTML = `<div class="statistics-empty"><p>Loading your word progress...</p></div>`;
+    try {
+        const response = await fetch(`${API_URL}/api/words`);
+        if (!response.ok) throw new Error("Could not load the vocabulary.");
+        const data = await response.json();
+        vocabulary = data.words;
+        renderStatisticsSummary();
+        renderStatisticsList();
+    } catch (error) {
+        console.error(error);
+        statisticsList.innerHTML = `<div class="statistics-empty"><h3>Statistics unavailable</h3><p>Could not connect to the vocabulary service.</p></div>`;
+    }
+}
+
+// Open the statistics page and refresh it so the latest quiz result is immediately visible.
+function showStatistics(event) {
+    event.preventDefault();
+    homeView.hidden = true;
+    statisticsView.hidden = false;
+    exploreView.hidden = true;
+    flashcardView.hidden = true;
+    quizView.hidden = true;
+    history.replaceState(null, "", "index.html#statistics");
+    loadStatistics();
+}
+
 // Switch to the explore screen, reset its transient state, and focus the search field immediately.
 function showExplore(event) {
     event.preventDefault();
     homeView.hidden = true;
+    statisticsView.hidden = true;
     exploreView.hidden = false;
     flashcardView.hidden = true;
     quizView.hidden = true;
@@ -280,6 +449,7 @@ async function searchWords() {
 function showFlashcards(event) {
     event.preventDefault();
     homeView.hidden = true;
+    statisticsView.hidden = true;
     exploreView.hidden = true;
     quizView.hidden = true;
     flashcardView.hidden = false;
@@ -334,7 +504,11 @@ function showResults() {
 function goToNextQuestion() {
     if (selectedAnswer === null) return;
 
-    if (selectedAnswer === questions[quizIndex].answer) {
+    const currentQuestion = questions[quizIndex];
+    const isCorrect = selectedAnswer === currentQuestion.answer;
+    recordQuizResult(currentQuestion, isCorrect);
+
+    if (isCorrect) {
         score += 1;
     }
 
@@ -374,6 +548,7 @@ async function generateQuiz() {
 function showQuiz(event) {
     event.preventDefault();
     homeView.hidden = true;
+    statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = false;
@@ -390,14 +565,27 @@ previousButton.addEventListener("click", previousCard);
 generateButton.addEventListener("click", generateSet);
 englishFirstButton.addEventListener("click", () => setStartingSide("english"));
 noongarFirstButton.addEventListener("click", () => setStartingSide("noongar"));
+statisticsLink.addEventListener("click", showStatistics);
 exploreLink.addEventListener("click", showExplore);
 flashcardsLink.addEventListener("click", showFlashcards);
 quizLink.addEventListener("click", showQuiz);
 homeFromExplore.addEventListener("click", showHome);
 homeFromFlashcards.addEventListener("click", showHome);
 homeFromQuiz.addEventListener("click", showHome);
+homeFromStatistics.addEventListener("click", showHome);
 nextQuestion.addEventListener("click", goToNextQuestion);
 newQuiz.addEventListener("click", generateQuiz);
+statisticsFilters.forEach((filterButton) => {
+    filterButton.addEventListener("click", () => {
+        activeStatisticsFilter = filterButton.dataset.filter;
+        statisticsFilters.forEach((button) => {
+            const isActive = button === filterButton;
+            button.classList.toggle("active", isActive);
+            button.setAttribute("aria-pressed", String(isActive));
+        });
+        renderStatisticsList();
+    });
+});
 searchInput.addEventListener("input", searchWords);
 clearSearchButton.addEventListener("click", () => {
     searchInput.value = "";
@@ -423,10 +611,13 @@ document.addEventListener("keydown", (event) => {
 });
 
 // Load the selected view automatically when the page opens.
-if (window.location.hash === "#explore") {
+if (window.location.hash === "#statistics") {
+    showStatistics({ preventDefault: () => {} });
+} else if (window.location.hash === "#explore") {
     showExplore({ preventDefault: () => {} });
 } else if (window.location.hash === "#quiz") {
     homeView.hidden = true;
+    statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = false;
@@ -435,6 +626,7 @@ if (window.location.hash === "#explore") {
     showFlashcards({ preventDefault: () => {} });
 } else {
     homeView.hidden = false;
+    statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = true;

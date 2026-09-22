@@ -25,15 +25,18 @@ const englishFirstButton = document.getElementById("englishFirstButton");
 const noongarFirstButton = document.getElementById("noongarFirstButton");
 
 const homeView = document.getElementById("homeView");
+const settingsView = document.getElementById("settingsView");
 const statisticsView = document.getElementById("statisticsView");
 const exploreView = document.getElementById("exploreView");
 const flashcardView = document.getElementById("flashcardView");
 const quizView = document.getElementById("quizView");
+const settingsLink = document.getElementById("settingsLink");
 const statisticsLink = document.getElementById("statisticsLink");
 const exploreLink = document.getElementById("exploreLink");
 const flashcardsLink = document.getElementById("flashcardsLink");
 const quizLink = document.getElementById("quizLink");
 const homeFromStatistics = document.getElementById("homeFromStatistics");
+const homeFromSettings = document.getElementById("homeFromSettings");
 const homeFromExplore = document.getElementById("homeFromExplore");
 const homeFromFlashcards = document.getElementById("homeFromFlashcards");
 const homeFromQuiz = document.getElementById("homeFromQuiz");
@@ -49,6 +52,11 @@ const scoreDisplay = document.getElementById("score");
 const scoreMessage = document.getElementById("scoreMessage");
 const newQuiz = document.getElementById("newQuiz");
 const errorMessage = document.getElementById("errorMessage");
+const reminderToggle = document.getElementById("reminderToggle");
+const dailyWordGoal = document.getElementById("dailyWordGoal");
+const dailyWordGoalValue = document.getElementById("dailyWordGoalValue");
+const questionsPerQuiz = document.getElementById("questionsPerQuiz");
+const questionsPerQuizValue = document.getElementById("questionsPerQuizValue");
 const wordsComplete = document.getElementById("wordsComplete");
 const studiedWordsLabel = document.getElementById("studiedWordsLabel");
 const studyingCount = document.getElementById("studyingCount");
@@ -70,9 +78,11 @@ let score = 0;
 let selectedAnswer = null;
 let vocabulary = [];
 let activeStatisticsFilter = "all";
+let userProficiency = {};
+let currentUser = null;
 
 // Keep quiz progress on this browser so statistics remain available after a page refresh.
-const PROFICIENCY_STORAGE_KEY = "noongarVocabularyProficiency";
+const SETTINGS_STORAGE_KEY = "noongarVocabularySettings";
 
 // Update the visible card and progress bar for the current item.
 function updateCard() {
@@ -166,6 +176,7 @@ async function generateSet() {
 function showHome(event) {
     event.preventDefault();
     homeView.hidden = false;
+    settingsView.hidden = true;
     statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
@@ -173,18 +184,70 @@ function showHome(event) {
     history.replaceState(null, "", "index.html#home");
 }
 
-// Read the saved proficiency map and tolerate an empty or damaged browser-storage value.
+// Open Settings, restore the saved controls, and keep the rest of the single-page views hidden.
+function showSettings(event) {
+    event.preventDefault();
+    homeView.hidden = true;
+    settingsView.hidden = false;
+    statisticsView.hidden = true;
+    exploreView.hidden = true;
+    flashcardView.hidden = true;
+    quizView.hidden = true;
+    history.replaceState(null, "", "index.html#settings");
+    renderSettings();
+}
+
+// Send requests with cookies so the backend, rather than browser storage, owns private account data.
+async function apiRequest(path, options = {}) {
+    const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "The request could not be completed.");
+    return data;
+}
+
+// Read user proficiency from the authenticated account; no local fallback can expose another user's data.
 function readProficiency() {
+    return userProficiency;
+}
+
+// Read saved learning preferences for quiz generation and initialize safe defaults while logged out.
+function readSettings() {
+    const defaults = { dailyReminder: false, dailyWordGoal: 10, questionsPerQuiz: 10 };
     try {
-        return JSON.parse(localStorage.getItem(PROFICIENCY_STORAGE_KEY) || "{}");
+        return { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}") };
     } catch (error) {
-        return {};
+        return defaults;
     }
 }
 
-// Save the latest proficiency map so every quiz attempt contributes to future statistics.
-function saveProficiency(proficiency) {
-    localStorage.setItem(PROFICIENCY_STORAGE_KEY, JSON.stringify(proficiency));
+// Render preferences returned from the private settings endpoint into the visible controls.
+function renderSettings(settings = readSettings()) {
+    reminderToggle.checked = settings.dailyReminder;
+    dailyWordGoal.value = settings.dailyWordGoal;
+    dailyWordGoalValue.textContent = settings.dailyWordGoal;
+    questionsPerQuiz.value = settings.questionsPerQuiz;
+    questionsPerQuizValue.textContent = settings.questionsPerQuiz;
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+}
+
+// Save the complete preference object to the authenticated account instead of trusting client-only state.
+async function updateSetting(name, value) {
+    const settings = { ...readSettings(), [name]: name === "dailyReminder" ? Boolean(value) : Number(value) };
+    if (!currentUser) {
+        renderSettings(settings);
+        return;
+    }
+    try {
+        const saved = await apiRequest("/api/settings", { method: "PUT", body: JSON.stringify(settings) });
+        renderSettings(saved);
+        currentUser.settings = saved;
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 // Convert a numeric proficiency into the category shown on the statistics page.
@@ -194,15 +257,13 @@ function getProficiencyStatus(value) {
     return "not studied yet";
 }
 
-// Apply one quiz result, clamping every word between zero and five progress points.
-function recordQuizResult(question, isCorrect) {
-    const proficiency = readProficiency();
-    const currentValue = Number(proficiency[question.noongar] || 0);
-    const nextValue = isCorrect
-        ? Math.min(5, currentValue + 1)
-        : Math.max(0, currentValue - 1);
-    proficiency[question.noongar] = nextValue;
-    saveProficiency(proficiency);
+// Apply one quiz result on the server, clamping the account-owned score between zero and five.
+async function recordQuizResult(question, isCorrect) {
+    if (!currentUser) return;
+    const currentValue = Number(userProficiency[question.noongar] || 0);
+    const nextValue = isCorrect ? Math.min(5, currentValue + 1) : Math.max(0, currentValue - 1);
+    const data = await apiRequest(`/api/profile/statistics/proficiency?noongar=${encodeURIComponent(question.noongar)}&value=${nextValue}`, { method: "POST" });
+    userProficiency[data.noongar] = data.value;
 }
 
 // Build the list for the selected filter and show a progress bar for each vocabulary word.
@@ -300,10 +361,9 @@ function renderProgressChart(counts) {
 async function loadStatistics() {
     statisticsList.innerHTML = `<div class="statistics-empty"><p>Loading your word progress...</p></div>`;
     try {
-        const response = await fetch(`${API_URL}/api/words`);
-        if (!response.ok) throw new Error("Could not load the vocabulary.");
-        const data = await response.json();
-        vocabulary = data.words;
+        const words = await apiRequest("/api/words");
+        vocabulary = words.words;
+        userProficiency = Object.assign({}, userProficiency);
         renderStatisticsSummary();
         renderStatisticsList();
     } catch (error) {
@@ -316,6 +376,7 @@ async function loadStatistics() {
 function showStatistics(event) {
     event.preventDefault();
     homeView.hidden = true;
+    settingsView.hidden = true;
     statisticsView.hidden = false;
     exploreView.hidden = true;
     flashcardView.hidden = true;
@@ -449,6 +510,7 @@ async function searchWords() {
 function showFlashcards(event) {
     event.preventDefault();
     homeView.hidden = true;
+    settingsView.hidden = true;
     statisticsView.hidden = true;
     exploreView.hidden = true;
     quizView.hidden = true;
@@ -501,12 +563,17 @@ function showResults() {
         : "Keep practising and try another quiz.";
 }
 
-function goToNextQuestion() {
+async function goToNextQuestion() {
     if (selectedAnswer === null) return;
 
     const currentQuestion = questions[quizIndex];
     const isCorrect = selectedAnswer === currentQuestion.answer;
-    recordQuizResult(currentQuestion, isCorrect);
+    try {
+        await recordQuizResult(currentQuestion, isCorrect);
+    } catch (error) {
+        quizStatus.textContent = "Could not save this result. Please log in again.";
+        return;
+    }
 
     if (isCorrect) {
         score += 1;
@@ -530,7 +597,7 @@ async function generateQuiz() {
     nextQuestion.disabled = true;
 
     try {
-        const response = await fetch(`${API_URL}/api/quiz`);
+        const response = await fetch(`${API_URL}/api/quiz?count=${readSettings().questionsPerQuiz}`);
         if (!response.ok) throw new Error("Could not generate quiz");
 
         const data = await response.json();
@@ -548,6 +615,7 @@ async function generateQuiz() {
 function showQuiz(event) {
     event.preventDefault();
     homeView.hidden = true;
+    settingsView.hidden = true;
     statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
@@ -565,6 +633,7 @@ previousButton.addEventListener("click", previousCard);
 generateButton.addEventListener("click", generateSet);
 englishFirstButton.addEventListener("click", () => setStartingSide("english"));
 noongarFirstButton.addEventListener("click", () => setStartingSide("noongar"));
+settingsLink.addEventListener("click", showSettings);
 statisticsLink.addEventListener("click", showStatistics);
 exploreLink.addEventListener("click", showExplore);
 flashcardsLink.addEventListener("click", showFlashcards);
@@ -573,8 +642,22 @@ homeFromExplore.addEventListener("click", showHome);
 homeFromFlashcards.addEventListener("click", showHome);
 homeFromQuiz.addEventListener("click", showHome);
 homeFromStatistics.addEventListener("click", showHome);
+homeFromSettings.addEventListener("click", showHome);
 nextQuestion.addEventListener("click", goToNextQuestion);
 newQuiz.addEventListener("click", generateQuiz);
+reminderToggle.addEventListener("change", () => updateSetting("dailyReminder", reminderToggle.checked));
+[dailyWordGoal, questionsPerQuiz].forEach((range) => {
+    range.addEventListener("input", () => updateSetting(range.id, range.value));
+});
+document.querySelectorAll(".stepper-button").forEach((button) => {
+    button.addEventListener("click", () => {
+        const settings = readSettings();
+        const name = button.dataset.setting;
+        const limits = name === "dailyWordGoal" ? { min: 1, max: 100 } : { min: 5, max: 20 };
+        const nextValue = Math.max(limits.min, Math.min(limits.max, Number(settings[name]) + Number(button.dataset.change)));
+        updateSetting(name, nextValue);
+    });
+});
 statisticsFilters.forEach((filterButton) => {
     filterButton.addEventListener("click", () => {
         activeStatisticsFilter = filterButton.dataset.filter;
@@ -611,23 +694,23 @@ document.addEventListener("keydown", (event) => {
 });
 
 // Load the selected view automatically when the page opens.
-if (window.location.hash === "#statistics") {
+if (window.location.hash === "#settings") {
+    showSettings({ preventDefault: () => {} });
+} else if (window.location.hash === "#statistics") {
     showStatistics({ preventDefault: () => {} });
 } else if (window.location.hash === "#explore") {
     showExplore({ preventDefault: () => {} });
 } else if (window.location.hash === "#quiz") {
-    homeView.hidden = true;
-    statisticsView.hidden = true;
-    exploreView.hidden = true;
-    flashcardView.hidden = true;
-    quizView.hidden = false;
-    generateQuiz();
+    showQuiz({ preventDefault: () => {} });
 } else if (window.location.hash === "#flashcards") {
     showFlashcards({ preventDefault: () => {} });
 } else {
     homeView.hidden = false;
+    settingsView.hidden = true;
     statisticsView.hidden = true;
     exploreView.hidden = true;
     flashcardView.hidden = true;
     quizView.hidden = true;
 }
+
+// Settings are kept local to the browser and the app no longer relies on a sign-in flow.

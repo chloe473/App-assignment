@@ -5,6 +5,7 @@ import random
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from quiz import router as quiz_router
 
 # Create the API app so the frontend can talk to the backend.
 app = FastAPI(title="Noongar Vocabulary API")
@@ -18,8 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(quiz_router)
+
 # Point to the CSV file that stores the vocabulary list.
 DATA_FILE = Path(__file__).parent / "data" / "noongar_dictionary.csv"
+
 
 # Read all the vocabulary rows from the CSV and convert them into a Python list.
 def load_wordlist():
@@ -47,10 +51,12 @@ def load_wordlist():
 
     return words
 
+
 # Health check endpoint to confirm the API is running.
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
 
 # Return a random group of vocabulary cards for the app to display.
 @app.get("/api/generate-set")
@@ -60,9 +66,11 @@ def generate_set(
     """Return a random set of vocabulary cards."""
     words = load_wordlist()
 
+    # Stop with a clear error if the vocabulary file is empty.
     if not words:
         raise HTTPException(status_code=500, detail="The wordlist is empty.")
 
+    # Make sure the request does not ask for more items than exist.
     count = min(count, len(words))
     selected = random.sample(words, count)
 
@@ -70,6 +78,7 @@ def generate_set(
         "count": len(selected),
         "cards": selected,
     }
+
 
 # Count how many words are stored in the vocabulary list.
 @app.get("/api/word-count")

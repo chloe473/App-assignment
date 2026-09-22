@@ -1,6 +1,7 @@
 # Import the API framework and feature routers.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from explore import router as explore_router
 from flashcards import router as flashcards_router
 from quiz import router as quiz_router
 
@@ -18,6 +19,7 @@ app.add_middleware(
 
 app.include_router(quiz_router)
 app.include_router(flashcards_router)
+app.include_router(explore_router)
 
 
 # Health check endpoint to confirm the API is running.

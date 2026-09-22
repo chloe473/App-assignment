@@ -14,7 +14,10 @@
         <!-- Home page with the learning activities and the user's progress shortcut. -->
         <header id="homeView" class="home-view">
             <!-- The statistics link stays in the upper-right corner so progress is always easy to reach. -->
-            <a id="statisticsLink" class="statistics-link" href="#statistics">My Statistics</a>
+            <nav class="home-navigation" aria-label="Personal navigation">
+                <a id="statisticsLink" class="statistics-link" href="#statistics">My Statistics</a>
+                <a id="settingsLink" class="settings-link" href="#settings" aria-label="Open Settings" title="Settings">⚙</a>
+            </nav>
             <div>
                 <p class="eyebrow">NOONGAR VOCABULARY</p>
                 <h1>Learn Noongar</h1>
@@ -36,6 +39,77 @@
                 </a>
             </div>
         </header>
+
+        <!-- Settings view contains the learner profile, study controls, and reference guidance. -->
+        <section id="settingsView" class="settings-view" hidden>
+            <!-- The settings header gives the user a clear route back to the activity menu. -->
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">NOONGAR VOCABULARY</p>
+                    <h1>Settings</h1>
+                    <p class="settings-subtitle">Manage your learning experience</p>
+                </div>
+                <a id="homeFromSettings" class="quiz-link" href="#home">Home</a>
+            </header>
+
+            <!-- These controls store the learner's daily reminder and practice targets locally. -->
+            <section class="settings-card preferences-card" aria-labelledby="preferencesTitle">
+                <div class="settings-card-heading">
+                    <div>
+                        <p class="language-label">LEARNING PREFERENCES</p>
+                        <h2 id="preferencesTitle">Make practice fit your day</h2>
+                    </div>
+                </div>
+                <div class="preference-row">
+                    <div><h3>Daily Study Reminder</h3><p>Get a nudge to study every day</p></div>
+                    <label class="switch-control"><input id="reminderToggle" type="checkbox"><span class="switch-slider"></span></label>
+                </div>
+                <div class="preference-row preference-number-row">
+                    <div><h3>Daily Word Goal</h3><p>Words to study each day (1–100)</p></div>
+                    <div class="stepper-control"><button class="stepper-button" data-setting="dailyWordGoal" data-change="-1" type="button">−</button><output id="dailyWordGoalValue">10</output><button class="stepper-button" data-setting="dailyWordGoal" data-change="1" type="button">+</button></div>
+                </div>
+                <input id="dailyWordGoal" class="settings-range" type="range" min="1" max="100" value="10" aria-label="Daily word goal">
+                <div class="preference-row preference-number-row">
+                    <div><h3>Questions per Quiz</h3><p>Number of questions in each quiz (5–20)</p></div>
+                    <div class="stepper-control coral-stepper"><button class="stepper-button" data-setting="questionsPerQuiz" data-change="-1" type="button">−</button><output id="questionsPerQuizValue">10</output><button class="stepper-button" data-setting="questionsPerQuiz" data-change="1" type="button">+</button></div>
+                </div>
+                <input id="questionsPerQuiz" class="settings-range coral-range" type="range" min="5" max="20" value="10" aria-label="Questions per quiz">
+            </section>
+
+            <!-- This instructional card explains exactly how quiz answers change proficiency. -->
+            <section class="settings-card proficiency-guide" aria-labelledby="proficiencyGuideTitle">
+                <p class="language-label">HOW IT WORKS</p>
+                <h2 id="proficiencyGuideTitle">How Proficiency Works</h2>
+                <div class="guide-grid">
+                    <p><span class="guide-icon">✓</span>Answer correctly to add <strong>+1</strong> proficiency.</p>
+                    <p><span class="guide-icon">✕</span>Answer incorrectly to remove <strong>−1</strong>, with a minimum of 0.</p>
+                    <p><span class="guide-icon">★</span>Reach 5 proficiency to master a word.</p>
+                    <p><span class="guide-icon">↻</span>Keep practising mastered words to keep skills sharp.</p>
+                </div>
+            </section>
+
+            <!-- The scale card makes each of the five proficiency levels easy to understand. -->
+            <section class="settings-card scale-card" aria-labelledby="scaleTitle">
+                <p class="language-label">REFERENCE</p>
+                <h2 id="scaleTitle">Proficiency Scale</h2>
+                <div class="scale-list">
+                    <p><span class="scale-dots">○ ○ ○ ○ ○</span><span>Not started</span></p>
+                    <p><span class="scale-dots">● ○ ○ ○ ○</span><span>Level 1</span></p>
+                    <p><span class="scale-dots">● ● ○ ○ ○</span><span>Level 2</span></p>
+                    <p><span class="scale-dots">● ● ● ○ ○</span><span>Level 3</span></p>
+                    <p><span class="scale-dots">● ● ● ● ○</span><span>Level 4</span></p>
+                    <p><span class="scale-dots mastered-scale">● ● ● ● ●</span><span>Mastered ✓</span></p>
+                </div>
+            </section>
+
+            <!-- The About card provides concise cultural and language context for learners. -->
+            <section class="settings-card about-card" aria-labelledby="aboutTitle">
+                <p class="language-label">ABOUT</p>
+                <h2 id="aboutTitle">About Noongar Language</h2>
+                <p>Noongar (also spelled Nyoongar, Nyungar) is spoken by Noongar people of south-west Western Australia. The language has around 700–1,000 active speakers and is being revitalised through education programs and community initiatives.</p>
+            </section>
+
+        </section>
 
         <!-- Statistics view summarises quiz progress and filters the vocabulary by proficiency. -->
         <section id="statisticsView" class="statistics-view" hidden>

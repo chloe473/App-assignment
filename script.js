@@ -57,6 +57,20 @@ const dailyWordGoal = document.getElementById("dailyWordGoal");
 const dailyWordGoalValue = document.getElementById("dailyWordGoalValue");
 const questionsPerQuiz = document.getElementById("questionsPerQuiz");
 const questionsPerQuizValue = document.getElementById("questionsPerQuizValue");
+const accountNameLabels = document.querySelectorAll("[data-account-name]");
+const accountDescription = document.getElementById("accountDescription");
+const signedOutAccount = document.getElementById("signedOutAccount");
+const signedInAccount = document.getElementById("signedInAccount");
+const accountMessage = document.getElementById("accountMessage");
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+const showLoginForm = document.getElementById("showLoginForm");
+const showRegisterForm = document.getElementById("showRegisterForm");
+const profileUsername = document.getElementById("profileUsername");
+const avatarPreview = document.getElementById("avatarPreview");
+const avatarInput = document.getElementById("avatarInput");
+const removeAvatarButton = document.getElementById("removeAvatarButton");
+const logoutButton = document.getElementById("logoutButton");
 const wordsComplete = document.getElementById("wordsComplete");
 const studiedWordsLabel = document.getElementById("studiedWordsLabel");
 const studyingCount = document.getElementById("studyingCount");
@@ -195,6 +209,7 @@ function showSettings(event) {
     quizView.hidden = true;
     history.replaceState(null, "", "index.html#settings");
     renderSettings();
+    updateAccountPanel();
 }
 
 // Send requests with cookies so the backend, rather than browser storage, owns private account data.
@@ -205,7 +220,11 @@ async function apiRequest(path, options = {}) {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || "The request could not be completed.");
+    if (!response.ok) {
+        const error = new Error(data.detail || "The request could not be completed.");
+        error.status = response.status;
+        throw error;
+    }
     return data;
 }
 
@@ -234,6 +253,165 @@ function renderSettings(settings = readSettings()) {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
 
+// Keep the Settings account panel synchronized with the server-validated session.
+function updateAccountPanel() {
+    const isSignedIn = Boolean(currentUser);
+    const displayName = currentUser?.username || currentUser?.name || "";
+    accountNameLabels.forEach((label) => {
+        label.textContent = isSignedIn ? `Signed in as ${displayName}` : "";
+        label.hidden = !isSignedIn;
+    });
+    accountMessage.textContent = "";
+    accountMessage.classList.remove("auth-error");
+    signedOutAccount.hidden = isSignedIn;
+    signedInAccount.hidden = !isSignedIn;
+    accountDescription.textContent = isSignedIn
+        ? "Your preferences, quiz progress, and profile picture are saved to your account."
+        : "Create an account or sign in to save quiz progress, preferences, and your profile picture in the backend. You must be logged in to view My Statistics.";
+
+    if (isSignedIn) {
+        profileUsername.value = currentUser.username || currentUser.name || "";
+        avatarPreview.textContent = currentUser.avatarUrl ? "" : (currentUser.username || currentUser.name || "?").slice(0, 1).toUpperCase();
+        avatarPreview.style.backgroundImage = currentUser.avatarUrl ? `url("${currentUser.avatarUrl}")` : "";
+        removeAvatarButton.hidden = !currentUser.avatarUrl;
+    } else {
+        removeAvatarButton.hidden = true;
+    }
+}
+
+// Switch between the two account forms without discarding any settings or app state.
+function selectAuthForm(mode) {
+    const showLogin = mode === "login";
+    loginForm.hidden = !showLogin;
+    registerForm.hidden = showLogin;
+    showLoginForm.setAttribute("aria-pressed", String(showLogin));
+    showRegisterForm.setAttribute("aria-pressed", String(!showLogin));
+    accountMessage.textContent = "";
+    accountMessage.classList.remove("auth-error");
+}
+
+// Restore account preferences and quiz proficiency after verifying the HttpOnly session.
+async function loadPrivateAccountData() {
+    const [settings, statistics] = await Promise.all([
+        apiRequest("/api/settings"),
+        apiRequest("/api/profile/statistics"),
+    ]);
+    renderSettings(settings);
+    userProficiency = statistics.proficiency || {};
+}
+
+// Find an existing session on page load so returning users keep their backend-owned progress.
+async function initializeAccount() {
+    try {
+        const data = await apiRequest("/api/auth/me");
+        currentUser = data.user;
+        updateAccountPanel();
+        try {
+            await loadPrivateAccountData();
+        } catch (error) {
+            console.error(error);
+        }
+    } catch (error) {
+        currentUser = null;
+        userProficiency = {};
+        updateAccountPanel();
+    }
+    if (window.location.hash === "#statistics") loadStatistics();
+}
+
+// Submit either account form and let the backend enforce credential and uniqueness rules.
+async function submitAuthentication(event, mode) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const username = String(formData.get("username") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    if (mode === "register") {
+        if (password.length < 8 || password.length > 20 || !/\p{L}/u.test(password) || !/\d/.test(password)) {
+            accountMessage.textContent = "Use 8-20 characters, including at least one letter and one number.";
+            accountMessage.classList.add("auth-error");
+            return;
+        }
+    }
+
+    try {
+        const path = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+        const result = await apiRequest(path, {
+            method: "POST",
+            body: JSON.stringify({ username, password }),
+        });
+        currentUser = result.user;
+        form.reset();
+        updateAccountPanel();
+        await loadPrivateAccountData();
+        if (window.location.hash === "#statistics") loadStatistics();
+    } catch (error) {
+        accountMessage.textContent = error.message || "Could not complete the account request.";
+        accountMessage.classList.add("auth-error");
+    }
+}
+
+// Convert an image to a bounded data URL and persist it under the authenticated account.
+async function saveProfilePicture(file) {
+    if (!file) return;
+    if (!/image\/(png|jpeg|webp)/.test(file.type) || file.size > 700 * 1024) {
+        accountMessage.textContent = "Choose a PNG, JPEG, or WebP image smaller than 700 KB.";
+        accountMessage.classList.add("auth-error");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+        try {
+            const result = await apiRequest("/api/profile/avatar", {
+                method: "PUT",
+                body: JSON.stringify({ avatarUrl: reader.result }),
+            });
+            currentUser.avatarUrl = result.avatarUrl;
+            updateAccountPanel();
+            accountMessage.textContent = "Profile picture saved.";
+            accountMessage.classList.remove("auth-error");
+        } catch (error) {
+            accountMessage.textContent = error.message || "Could not save the profile picture.";
+            accountMessage.classList.add("auth-error");
+        }
+    };
+    reader.onerror = () => {
+        accountMessage.textContent = "Could not read that image file.";
+        accountMessage.classList.add("auth-error");
+    };
+    reader.readAsDataURL(file);
+}
+
+// Remove the stored picture through the authenticated backend endpoint.
+async function removeProfilePicture() {
+    if (!currentUser?.avatarUrl) return;
+    try {
+        const result = await apiRequest("/api/profile/avatar", { method: "DELETE" });
+        currentUser.avatarUrl = result.avatarUrl;
+        updateAccountPanel();
+        accountMessage.textContent = "Profile picture removed.";
+    } catch (error) {
+        accountMessage.textContent = error.message || "Could not remove the profile picture.";
+        accountMessage.classList.add("auth-error");
+    }
+}
+
+// Clear the server session and private progress when the user signs out.
+async function signOut() {
+    try {
+        await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+        console.error(error);
+    }
+    currentUser = null;
+    userProficiency = {};
+    if (vocabulary.length) renderStatisticsSummary();
+    updateAccountPanel();
+    if (window.location.hash === "#statistics") loadStatistics();
+}
+
 // Save the complete preference object to the authenticated account instead of trusting client-only state.
 async function updateSetting(name, value) {
     const settings = { ...readSettings(), [name]: name === "dailyReminder" ? Boolean(value) : Number(value) };
@@ -253,16 +431,14 @@ async function updateSetting(name, value) {
 // Convert a numeric proficiency into the category shown on the statistics page.
 function getProficiencyStatus(value) {
     if (value >= 5) return "mastered";
-    if (value >= 1) return "studying";
+    if (value >= 1 && value <= 4) return "studying";
     return "not studied yet";
 }
 
-// Apply one quiz result on the server, clamping the account-owned score between zero and five.
+// Apply one quiz result on the server using its saved score as the source of truth.
 async function recordQuizResult(question, isCorrect) {
     if (!currentUser) return;
-    const currentValue = Number(userProficiency[question.noongar] || 0);
-    const nextValue = isCorrect ? Math.min(5, currentValue + 1) : Math.max(0, currentValue - 1);
-    const data = await apiRequest(`/api/profile/statistics/proficiency?noongar=${encodeURIComponent(question.noongar)}&value=${nextValue}`, { method: "POST" });
+    const data = await apiRequest(`/api/profile/statistics/proficiency?noongar=${encodeURIComponent(question.noongar)}&isCorrect=${isCorrect}`, { method: "POST" });
     userProficiency[data.noongar] = data.value;
 }
 
@@ -302,20 +478,20 @@ function renderStatisticsList() {
     });
 }
 
-// Update the summary cards using only words that have been tested at least once.
+// Calculate mastery and studying from explicit proficiency scores, excluding untouched words.
 function renderStatisticsSummary() {
     const proficiency = readProficiency();
     const values = vocabulary.map((word) => Number(proficiency[word.noongar] || 0));
-    const mastered = values.filter((value) => value >= 5).length;
-    const studying = values.filter((value) => value >= 1 && value < 5).length;
-    const studied = mastered + studying;
-    const complete = studied === 0 ? 0 : Math.round((mastered / studied) * 100);
+    const scoredWords = values.filter((value) => value >= 1 && value <= 5).length;
+    const mastered = values.filter((value) => value === 5).length;
+    const studying = values.filter((value) => value >= 1 && value <= 4).length;
+    const complete = scoredWords === 0 ? 0 : Math.round((mastered / scoredWords) * 100);
 
     wordsComplete.textContent = `${complete}%`;
-    studiedWordsLabel.textContent = `of studied words (${studied} total)`;
+    studiedWordsLabel.textContent = `${mastered} out of ${scoredWords} words studying`;
     studyingCount.textContent = String(studying);
     masteredCount.textContent = String(mastered);
-    renderProgressChart({ studying, mastered, notStudied: vocabulary.length - studied });
+    renderProgressChart({ studying, mastered, notStudied: vocabulary.length - studying - mastered });
 }
 
 // Render the full-list distribution as a CSS pie chart and a text-based accessible legend.
@@ -360,15 +536,46 @@ function renderProgressChart(counts) {
 // Load the shared CSV-backed vocabulary before rendering the statistics view.
 async function loadStatistics() {
     statisticsList.innerHTML = `<div class="statistics-empty"><p>Loading your word progress...</p></div>`;
+    if (!currentUser) {
+        userProficiency = {};
+        if (vocabulary.length) renderStatisticsSummary();
+        const notice = document.createElement("div");
+        notice.className = "statistics-empty";
+        const title = document.createElement("h3");
+        title.textContent = "Sign in to view My Statistics";
+        const detail = document.createElement("p");
+        detail.textContent = "You must be logged in to view your statistics. Sign in or create an account in Settings.";
+        notice.append(title, detail);
+        statisticsList.replaceChildren(notice);
+        return;
+    }
     try {
-        const words = await apiRequest("/api/words");
+        const [words, statistics] = await Promise.all([
+            apiRequest("/api/words"),
+            apiRequest("/api/profile/statistics"),
+        ]);
         vocabulary = words.words;
-        userProficiency = Object.assign({}, userProficiency);
+        userProficiency = statistics.proficiency || {};
         renderStatisticsSummary();
         renderStatisticsList();
     } catch (error) {
         console.error(error);
-        statisticsList.innerHTML = `<div class="statistics-empty"><h3>Statistics unavailable</h3><p>Could not connect to the vocabulary service.</p></div>`;
+        if (error.status === 401) {
+            currentUser = null;
+            userProficiency = {};
+            updateAccountPanel();
+            if (vocabulary.length) renderStatisticsSummary();
+            loadStatistics();
+            return;
+        }
+        const notice = document.createElement("div");
+        notice.className = "statistics-empty";
+        const title = document.createElement("h3");
+        title.textContent = "Statistics unavailable";
+        const detail = document.createElement("p");
+        detail.textContent = error.message || "The vocabulary service could not load your statistics.";
+        notice.append(title, detail);
+        statisticsList.replaceChildren(notice);
     }
 }
 
@@ -635,6 +842,13 @@ englishFirstButton.addEventListener("click", () => setStartingSide("english"));
 noongarFirstButton.addEventListener("click", () => setStartingSide("noongar"));
 settingsLink.addEventListener("click", showSettings);
 statisticsLink.addEventListener("click", showStatistics);
+showLoginForm.addEventListener("click", () => selectAuthForm("login"));
+showRegisterForm.addEventListener("click", () => selectAuthForm("register"));
+loginForm.addEventListener("submit", (event) => submitAuthentication(event, "login"));
+registerForm.addEventListener("submit", (event) => submitAuthentication(event, "register"));
+logoutButton.addEventListener("click", signOut);
+avatarInput.addEventListener("change", () => saveProfilePicture(avatarInput.files[0]));
+removeAvatarButton.addEventListener("click", removeProfilePicture);
 exploreLink.addEventListener("click", showExplore);
 flashcardsLink.addEventListener("click", showFlashcards);
 quizLink.addEventListener("click", showQuiz);
@@ -693,6 +907,9 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
+// Restore a valid backend session before loading private account features.
+initializeAccount();
+
 // Load the selected view automatically when the page opens.
 if (window.location.hash === "#settings") {
     showSettings({ preventDefault: () => {} });
@@ -713,4 +930,3 @@ if (window.location.hash === "#settings") {
     quizView.hidden = true;
 }
 
-// Settings are kept local to the browser and the app no longer relies on a sign-in flow.

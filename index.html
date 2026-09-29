@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noongar Vocabulary</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 
 <body>
@@ -15,6 +15,7 @@
         <header id="homeView" class="home-view">
             <!-- The statistics link stays in the upper-right corner so progress is always easy to reach. -->
             <nav class="home-navigation" aria-label="Personal navigation">
+                <span class="account-nav-label" data-account-name hidden></span>
                 <a id="statisticsLink" class="statistics-link" href="#statistics">My Statistics</a>
                 <a id="settingsLink" class="settings-link" href="#settings" aria-label="Open Settings" title="Settings">⚙</a>
             </nav>
@@ -49,8 +50,60 @@
                     <h1>Settings</h1>
                     <p class="settings-subtitle">Manage your learning experience</p>
                 </div>
-                <a id="homeFromSettings" class="quiz-link" href="#home">Home</a>
+                <div class="topbar-nav">
+                    <span class="account-nav-label" data-account-name hidden></span>
+                    <a id="homeFromSettings" class="quiz-link home-return-link" href="#home">Home</a>
+                </div>
             </header>
+
+            <!-- Account controls explain login requirements and expose saved profile features. -->
+            <section class="settings-card account-card" aria-labelledby="accountTitle">
+                <div class="settings-card-heading">
+                    <div>
+                        <p class="language-label">YOUR ACCOUNT</p>
+                        <h2 id="accountTitle">Sign in to save your progress</h2>
+                        <p id="accountDescription">Create an account or sign in to save quiz progress, preferences, and your profile picture in the backend. You must be logged in to view My Statistics.</p>
+                    </div>
+                </div>
+                <div id="signedOutAccount">
+                    <div class="profile-actions">
+                        <button id="showLoginForm" class="outline-button" type="button" aria-pressed="true">Sign in</button>
+                        <button id="showRegisterForm" class="outline-button" type="button" aria-pressed="false">Create account</button>
+                    </div>
+                    <form id="loginForm" class="auth-form">
+                        <label for="loginUsername">Username</label>
+                        <input id="loginUsername" name="username" type="text" minlength="3" maxlength="32" autocomplete="username" required>
+                        <label for="loginPassword">Password</label>
+                        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+                        <button class="primary-button" type="submit">Sign in</button>
+                    </form>
+                    <form id="registerForm" class="auth-form" hidden>
+                        <label for="registerUsername">Choose a username</label>
+                        <input id="registerUsername" name="username" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" autocomplete="username" required>
+                        <label for="registerPassword">Create a password</label>
+                        <input id="registerPassword" name="password" type="password" minlength="8" maxlength="20" autocomplete="new-password" required aria-describedby="passwordHint">
+                        <p id="passwordHint" class="password-hint">Use 8-20 characters, including at least one letter and one number.</p>
+                        <button class="primary-button" type="submit">Create account</button>
+                    </form>
+                </div>
+                <p id="accountMessage" class="auth-message" aria-live="polite"></p>
+                <div id="signedInAccount" class="profile-content" hidden>
+                    <div class="avatar-column">
+                        <div id="avatarPreview" class="avatar-preview" aria-label="Profile picture">?</div>
+                        <label class="avatar-upload" for="avatarInput">Change picture</label>
+                        <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                    </div>
+                    <div class="profile-fields">
+                        <label for="profileUsername">Username
+                            <input id="profileUsername" type="text" readonly>
+                        </label>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="removeAvatarButton" class="outline-button" type="button" hidden>Remove picture</button>
+                        <button id="logoutButton" class="outline-button" type="button">Sign out</button>
+                    </div>
+                </div>
+            </section>
 
             <!-- These controls store the learner's daily reminder and practice targets locally. -->
             <section class="settings-card preferences-card" aria-labelledby="preferencesTitle">
@@ -119,15 +172,18 @@
                     <p class="eyebrow">NOONGAR VOCABULARY</p>
                     <h1>My Statistics</h1>
                 </div>
-                <a id="homeFromStatistics" class="quiz-link" href="#home">Home</a>
+                <div class="topbar-nav">
+                    <span class="account-nav-label" data-account-name hidden></span>
+                    <a id="homeFromStatistics" class="quiz-link home-return-link" href="#home">Home</a>
+                </div>
             </header>
 
             <!-- These summary cards show the requested progress measures at a glance. -->
             <section class="statistics-summary" aria-label="Vocabulary progress summary">
                 <article class="stat-card stat-card-complete">
-                    <span class="stat-label">WORDS COMPLETE</span>
+                    <span class="stat-label">WORDS MASTERED</span>
                     <strong id="wordsComplete">0%</strong>
-                    <span id="studiedWordsLabel">of studied words</span>
+                    <span id="studiedWordsLabel">out of words studying</span>
                 </article>
                 <article class="stat-card">
                     <span class="stat-label">STUDYING</span>
@@ -146,7 +202,7 @@
                 <div class="statistics-chart-copy">
                     <p class="language-label">FULL WORD LIST</p>
                     <h2 id="progressChartTitle">Your study progress</h2>
-                    <p>Every word is included, including words you have not tested yet.</p>
+                    <p>This chart includes every word from our dictionary, including words you have not tested yet.</p>
                 </div>
                 <div class="statistics-chart-area">
                     <div id="progressChart" class="progress-chart" role="img" aria-label="Vocabulary progress chart"></div>
@@ -179,7 +235,10 @@
                     <p class="eyebrow">NOONGAR VOCABULARY</p>
                     <h1>Explore words</h1>
                 </div>
-                <a id="homeFromExplore" class="quiz-link" href="#home">Home</a>
+                <div class="topbar-nav">
+                    <span class="account-nav-label" data-account-name hidden></span>
+                    <a id="homeFromExplore" class="quiz-link home-return-link" href="#home">Home</a>
+                </div>
             </header>
 
             <!-- This search panel explains the search scope and owns the auto-focused input. -->
@@ -217,10 +276,10 @@
                 </div>
 
                 <div class="topbar-actions">
-                    <a id="homeFromFlashcards" class="quiz-link" href="#home">Home</a>
-                <button id="generateButton" class="generate-button">
-                    Generate Set
-                </button>
+                    <div class="topbar-nav">
+                        <span class="account-nav-label" data-account-name hidden></span>
+                        <a id="homeFromFlashcards" class="quiz-link home-return-link" href="#home">Home</a>
+                    </div>
                 </div>
             </header>
 
@@ -305,6 +364,9 @@
                     Noongar
                 </button>
             </div>
+            <button id="generateButton" class="generate-button">
+                Generate Set
+            </button>
         </div>
 
             <!-- Small reminder text under the controls. -->
@@ -317,7 +379,10 @@
                     <p class="eyebrow">NOONGAR VOCABULARY</p>
                     <h1>Translation Quiz</h1>
                 </div>
-                <a id="homeFromQuiz" class="quiz-link" href="#home">Home</a>
+                <div class="topbar-nav">
+                    <span class="account-nav-label" data-account-name hidden></span>
+                    <a id="homeFromQuiz" class="quiz-link home-return-link" href="#home">Home</a>
+                </div>
             </header>
 
             <section class="progress-area">

@@ -48,13 +48,16 @@ DEFAULT_SETTINGS = {
 
 # Define request bodies used by authentication, profile, and settings routes.
 class RegisterPayload(BaseModel):
-    name: str = Field(min_length=1, max_length=80)
-    email: str = Field(min_length=5, max_length=254)
-    password: str = Field(min_length=10, max_length=128)
+    username: str | None = Field(default=None, min_length=3, max_length=32)
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    email: str | None = Field(default=None, min_length=5, max_length=254)
+    password: str = Field(min_length=8, max_length=20)
 
 
 class LoginPayload(BaseModel):
-    email: str
+    username: str | None = None
+    email: str | None = None
+    identifier: str | None = None
     password: str
 
 
@@ -64,7 +67,7 @@ class ForgotPasswordPayload(BaseModel):
 
 class ResetPasswordPayload(BaseModel):
     token: str
-    password: str = Field(min_length=10, max_length=128)
+    password: str = Field(min_length=8, max_length=20)
 
 
 class VerifyEmailPayload(BaseModel):
@@ -89,6 +92,10 @@ class DeleteAccountPayload(BaseModel):
     password: str
 
 
+class AvatarPayload(BaseModel):
+    avatarUrl: str | None = Field(default=None, max_length=1_000_000)
+
+
 # Read the JSON database while recovering safely from a first-run or empty file.
 def read_users():
     if not USERS_FILE.exists():
@@ -102,7 +109,7 @@ def read_users():
 # Persist users atomically with restrictive permissions where the OS supports them.
 def write_users(users):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temporary_file = USERS_FILE.with_suffix(".tmp")
+    temporary_file = USERS_FILE.with_name(f"{USERS_FILE.name}.{secrets.token_hex(8)}.tmp")
     temporary_file.write_text(json.dumps(users, indent=2), encoding="utf-8")
     os.replace(temporary_file, USERS_FILE)
     try:
@@ -118,14 +125,25 @@ def validate_email(email):
     return email.lower().strip()
 
 
-# Validate password strength before hashing so weak credentials never enter storage.
+# Normalize usernames so account lookups and uniqueness checks are case-insensitive.
+def validate_username(username):
+    username = username.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_]{3,32}", username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 3-32 characters and use only letters, numbers, or underscores.",
+        )
+    return username
+
+
+# Require an 8-20 character password containing both letters and numbers before hashing it.
 def validate_password(password):
-    if len(password) < 10 or not any(char.isdigit() for char in password) or not any(
-        not char.isalnum() for char in password
+    if not 8 <= len(password) <= 20 or not any(char.isalpha() for char in password) or not any(
+        char.isdigit() for char in password
     ):
         raise HTTPException(
             status_code=400,
-            detail="Password must be at least 10 characters and include a number and special character.",
+            detail="Password must contain 8-20 characters and include at least one letter and one number.",
         )
 
 
@@ -194,7 +212,7 @@ def set_session_cookie(response, token):
     )
 
 
-# Resolve the authenticated user and refresh inactivity expiry for each protected call.
+# Resolve the authenticated user without rewriting the database on read-only API calls.
 def current_user(session_token):
     if not session_token:
         raise HTTPException(status_code=401, detail="Please log in first.")
@@ -208,8 +226,6 @@ def current_user(session_token):
                 user.pop("session", None)
                 write_users(users)
                 raise HTTPException(status_code=401, detail="Your session has expired.")
-            session["expiresAt"] = now + SESSION_TTL_SECONDS
-            write_users(users)
             if not user.get("emailVerified"):
                 raise HTTPException(status_code=403, detail="Please verify your email first.")
             return user, users
@@ -220,7 +236,9 @@ def current_user(session_token):
 def public_user(user):
     return {
         "name": user["name"],
+        "username": user.get("username"),
         "email": user["email"],
+        "avatarUrl": user.get("avatarUrl"),
         "emailVerified": user.get("emailVerified", False),
         "settings": user.get("settings", DEFAULT_SETTINGS.copy()),
     }
@@ -229,8 +247,38 @@ def public_user(user):
 # Register an account and return a development token until an email provider is configured.
 @router.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterPayload, response: Response):
-    """Create an account with a strong hashed password and email verification token."""
+    """Create a username account or preserve the older email-verification flow."""
     validate_password(payload.password)
+    if payload.username:
+        username = validate_username(payload.username)
+        users = read_users()
+        if any((user.get("username") or "").casefold() == username.casefold() for user in users.values()):
+            raise HTTPException(status_code=409, detail="That username is already in use.")
+
+        # Store the account, hash the password, and issue a session without requiring email setup.
+        account_key = f"username:{username.casefold()}"
+        user = {
+            "name": username,
+            "username": username,
+            "email": None,
+            "passwordHash": hash_password(payload.password),
+            "emailVerified": True,
+            "settings": DEFAULT_SETTINGS.copy(),
+            "proficiency": {},
+            "loginFailures": 0,
+            "lockedUntil": 0,
+        }
+        users[account_key] = user
+        token = secrets.token_urlsafe(32)
+        user["session"] = {"tokenHash": hash_token(token), "expiresAt": int(time.time()) + SESSION_TTL_SECONDS}
+        write_users(users)
+        set_session_cookie(response, token)
+        secure_headers(response)
+        return {"message": "Account created.", "user": public_user(user)}
+
+    # Continue accepting legacy email registrations for accounts created by older versions.
+    if not payload.name or not payload.email:
+        raise HTTPException(status_code=400, detail="Enter a username to create an account.")
     email = validate_email(payload.email)
     users = read_users()
     if email in users:
@@ -238,6 +286,7 @@ def register(payload: RegisterPayload, response: Response):
     verification_token = secrets.token_urlsafe(32)
     users[email] = {
         "name": payload.name.strip(),
+        "username": None,
         "email": email,
         "passwordHash": hash_password(payload.password),
         "emailVerified": False,
@@ -277,10 +326,21 @@ def verify_email(payload: VerifyEmailPayload, response: Response):
 # Authenticate credentials, enforce lockout protection, and issue an expiring session cookie.
 @router.post("/api/auth/login")
 def login(payload: LoginPayload, response: Response):
-    """Log in with rate-limited credentials and an HttpOnly session token."""
+    """Log in by username or legacy email with rate limits and a session token."""
     users = read_users()
-    email = validate_email(payload.email)
-    user = users.get(email)
+    identifier = (payload.username or payload.identifier or payload.email or "").strip()
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Enter your username and password.")
+    normalized_identifier = identifier.casefold()
+    user = next(
+        (
+            account
+            for account in users.values()
+            if (account.get("username") or "").casefold() == normalized_identifier
+            or (account.get("email") or "").casefold() == normalized_identifier
+        ),
+        None,
+    )
     now = int(time.time())
     if user and user.get("lockedUntil", 0) > now:
         raise HTTPException(status_code=429, detail="Too many attempts. Try again later.")
@@ -291,7 +351,7 @@ def login(payload: LoginPayload, response: Response):
                 user["lockedUntil"] = now + LOCKOUT_SECONDS
             write_users(users)
         raise HTTPException(status_code=401, detail="Invalid email or password.")
-    if not user.get("emailVerified"):
+    if user.get("email") and not user.get("emailVerified"):
         raise HTTPException(status_code=403, detail="Please verify your email first.")
     token = secrets.token_urlsafe(32)
     user["session"] = {"tokenHash": hash_token(token), "expiresAt": now + SESSION_TTL_SECONDS}
@@ -418,17 +478,58 @@ def get_user_statistics(response: Response, noongar_session: str | None = Cookie
 @router.post("/api/profile/statistics/proficiency")
 def update_proficiency(
     noongar: str,
-    value: int = Query(ge=0, le=5),
+    value: int | None = Query(default=None, ge=0, le=5),
+    is_correct: bool | None = Query(default=None, alias="isCorrect"),
     response: Response = None,
     noongar_session: str | None = Cookie(default=None),
 ):
-    """Persist a clamped proficiency value without trusting a client user id."""
+    """Update proficiency from correctness, using the saved score as the source of truth."""
     user, users = current_user(noongar_session)
-    user.setdefault("proficiency", {})[noongar] = max(0, min(5, value))
+    proficiency = user.setdefault("proficiency", {})
+    if is_correct is not None:
+        current_value = int(proficiency.get(noongar, 0))
+        value = min(5, current_value + 1) if is_correct else max(0, current_value - 1)
+    elif value is None:
+        raise HTTPException(status_code=400, detail="Provide a quiz result to update proficiency.")
+    proficiency[noongar] = max(0, min(5, value))
     write_users(users)
     if response:
         secure_headers(response)
-    return {"noongar": noongar, "value": user["proficiency"][noongar]}
+    return {"noongar": noongar, "value": proficiency[noongar]}
+
+
+# Store a small validated image data URL with the account's other backend-owned data.
+@router.put("/api/profile/avatar")
+def update_avatar(
+    payload: AvatarPayload,
+    response: Response,
+    noongar_session: str | None = Cookie(default=None),
+):
+    """Save or clear a PNG, JPEG, or WebP profile image for the signed-in user."""
+    user, users = current_user(noongar_session)
+    avatar_url = payload.avatarUrl
+    if avatar_url is not None and not re.fullmatch(
+        r"data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}", avatar_url
+    ):
+        raise HTTPException(status_code=400, detail="Choose a valid PNG, JPEG, or WebP image.")
+    user["avatarUrl"] = avatar_url
+    write_users(users)
+    secure_headers(response)
+    return {"avatarUrl": avatar_url}
+
+
+# Remove only the authenticated user's saved picture without disturbing other profile data.
+@router.delete("/api/profile/avatar")
+def delete_avatar(
+    response: Response,
+    noongar_session: str | None = Cookie(default=None),
+):
+    """Clear the signed-in user's profile picture from persistent account storage."""
+    user, users = current_user(noongar_session)
+    user.pop("avatarUrl", None)
+    write_users(users)
+    secure_headers(response)
+    return {"avatarUrl": None}
 
 
 # Permanently delete the account and all associated profile, session, and proficiency data.
@@ -438,7 +539,10 @@ def delete_account(payload: DeleteAccountPayload, response: Response, noongar_se
     user, users = current_user(noongar_session)
     if not verify_password(payload.password, user.get("passwordHash", "")):
         raise HTTPException(status_code=403, detail="Password confirmation failed.")
-    users.pop(user["email"], None)
+    # Remove by record identity because username accounts use a different database key.
+    account_key = next((key for key, account in users.items() if account is user), None)
+    if account_key is not None:
+        users.pop(account_key)
     write_users(users)
     response.delete_cookie(SESSION_COOKIE)
     secure_headers(response)
@@ -451,5 +555,5 @@ def privacy_policy():
     """Describe storage, access, sharing, and deletion rights for this prototype."""
     return {
         "title": "Noongar Vocabulary Privacy Policy",
-        "text": "Your account stores your name, email, password hash, settings, sessions, and quiz proficiency. Proficiency is private and accessible only after login. You can disable optional data collection, turn off sharing, request a reset, or permanently delete your account and associated data.",
+        "text": "Your account stores your username, optional email, password hash, profile image, settings, sessions, and quiz proficiency. Proficiency is private and accessible only after login. You can disable optional data collection, turn off sharing, request a reset, or permanently delete your account and associated data.",
     }

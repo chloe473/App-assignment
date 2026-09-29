@@ -75,6 +75,22 @@ body {
     position: static;
 }
 
+.account-nav-label {
+    max-width: 200px;
+    overflow: hidden;
+    color: var(--purple);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
 /* Style the primary account-creation action beside the existing personal navigation links. */
 .register-link {
     min-height: 43px;
@@ -180,8 +196,9 @@ body {
 
 .topbar-actions {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
 }
 
 .quiz-link {
@@ -192,6 +209,23 @@ body {
 
 .quiz-link:hover {
     text-decoration: underline;
+}
+
+.home-return-link {
+    display: inline-flex;
+    min-height: 43px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-radius: 12px;
+    background: var(--purple);
+    color: var(--white);
+    text-decoration: none;
+}
+
+.home-return-link:hover {
+    background: var(--purple-dark);
+    color: var(--white);
 }
 
 .eyebrow,
@@ -328,6 +362,16 @@ h1 {
 
 .outline-button:hover {
     background: var(--purple-light);
+}
+
+.profile-actions .outline-button[aria-pressed="true"] {
+    border-color: var(--purple);
+    background: var(--purple);
+    color: var(--white);
+}
+
+.profile-actions .outline-button[aria-pressed="true"]:hover {
+    background: var(--purple-dark);
 }
 
 /* Keep Log in and Register together as the two account actions in the profile card. */
@@ -1128,13 +1172,22 @@ h1 {
 }
 
 .generate-button {
-    padding: 15px 24px;
+    min-height: 42px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--purple-light);
+    color: var(--purple);
+    font-size: 0.85rem;
 }
 
 .generate-button:hover,
 .primary-button:hover {
     background: var(--purple-dark);
     transform: translateY(-1px);
+}
+
+.generate-button:hover {
+    background: #e1d9ff;
 }
 
 /* The progress bar and text show the user's place within the current set. */
@@ -1487,7 +1540,7 @@ h1 {
 
     .topbar-actions {
         width: 100%;
-        flex-direction: column-reverse;
+        flex-direction: column;
         align-items: stretch;
         text-align: center;
     }
@@ -1514,6 +1567,16 @@ h1 {
     .home-navigation .statistics-link {
         top: auto;
         right: auto;
+    }
+
+    .home-navigation .account-nav-label {
+        max-width: 96px;
+        font-size: 0.68rem;
+    }
+
+    .topbar-nav {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .statistics-summary {
@@ -1637,8 +1700,19 @@ h1 {
     }
 
     .starting-side {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         gap: 8px;
+    }
+
+    .side-option {
+        padding: 7px 8px;
+    }
+
+    .starting-side .generate-button {
+        padding: 8px 9px;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 
     .quiz-panel,

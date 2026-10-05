@@ -1,7 +1,7 @@
 # Import the API router and query validation used by the Explore screen.
 from fastapi import APIRouter, Query
 
-from flashcards import load_wordlist
+from backend.flashcards import load_wordlist
 
 
 # Create the router that owns dictionary search requests from the Explore screen.

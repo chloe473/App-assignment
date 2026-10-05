@@ -4,11 +4,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from explore import router as explore_router
-from flashcards import router as flashcards_router
-from quiz import router as quiz_router
-from setting import router as setting_router
-from statistics import router as statistics_router
+from backend.explore import router as explore_router
+from backend.flashcards import router as flashcards_router
+from backend.quiz import router as quiz_router
+from backend.setting import router as setting_router
+from backend.statistics import router as statistics_router
 
 # Resolve the frontend directory relative to this module for both local and Render deployments.
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
